@@ -2,7 +2,7 @@ import os
 import random
 import argparse
 import sys
-from ipaddress import IPv6Network
+from ipaddress import IPv6Network, IPv4Network
 
 import yaml
 
@@ -22,7 +22,7 @@ def get_ipv6(args) -> list:
 
 def write_squid_config(args, ip_list):
     with open('config/squid.conf', 'w') as f:
-        f.write('acl myip src {}\n'.format(args.source))
+        f.write('acl myip src {}\n'.format(IPv4Network(args.source)))
         for idx, value in enumerate(ip_list, START_PORT):
             f.write('acl mynet{} myportname {}\n'.format(idx, idx))
         f.write('acl SSL_ports port 443\n')

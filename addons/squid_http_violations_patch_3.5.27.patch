@@ -1,0 +1,12 @@
+--- rules	2020-01-07 17:59:24.594245311 +0000
++++ squid3-3.5.27/debian/rules	2018-08-08 17:49:18.000000000 +0000
+@@ -50,8 +50,7 @@
+ 		--with-pidfile=/var/run/squid.pid \
+ 		--with-filedescriptors=65536 \
+ 		--with-large-files \
+-		--with-default-user=proxy \
+-		--enable-http-violations
++		--with-default-user=proxy
+ 
+ BUILDINFO := $(shell lsb_release -si 2>/dev/null)
+ 

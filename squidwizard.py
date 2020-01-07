@@ -37,13 +37,16 @@ def write_squid_config(args, ip_list):
             f.write('http_port {} name={}\n'.format(idx, idx))
         for idx, value in enumerate(ip_list, START_PORT):
             f.write('tcp_outgoing_address {} mynet{}\n'.format(value, idx))
-        headers = ['Authorization', 'Proxy-Authorization', 'Cache-Control', 'Content-Length', 'Content-Type',
-                   'Date allow', 'Host allow', 'If-Modified-Since', 'Pragma', 'Accept', 'Accept-Charset',
-                   'Accept-Encoding', 'Accept-Language', 'Connection', 'User-Agent', ]
-        for header in headers:
+        request_headers = ['Authorization', 'Proxy-Authorization', 'Cache-Control', 'Content-Length', 'Content-Type',
+                           'Date', 'Host', 'If-Modified-Since', 'Pragma', 'Accept', 'Accept-Charset','Accept-Encoding',
+                           'Accept-Language', 'Connection', 'User-Agent', ]
+        for header in request_headers:
             f.write('request_header_access {} allow all\n'.format(header))
         f.write('request_header_access All deny all\n')
-        for header in headers:
+        reply_headers = ['Allow', 'WWW-Authenticate', 'Proxy-Authenticate', 'Cache-Control', 'Content-Encoding',
+                         'Content-Length', 'Content-Type', 'Date', 'Expires', 'Last-Modified', 'Location', 'Pragma',
+                         'Content-Language', 'Retry-After', 'Title', 'Content-Disposition', 'Connection']
+        for header in reply_headers:
             f.write('reply_header_access {} allow all\n'.format(header))
         f.write('reply_header_access All deny all\n')
 

@@ -22,5 +22,14 @@ def test_write_squid_config(tmp_path):
     ip_list = [IPv6Address('fdb8:c38f:49bf:3505::2'), IPv6Address('fdb8:c38f:49bf:3505::5')]
     sw.write_squid_config(ip_list=ip_list)
     assert len(list(tmp_path.iterdir())) == 1
+    file = tmp_path.joinpath('squid.conf')
+    text = file.read_text()
+    assert 'acl myip src 192.168.1.1' in text
+    assert 'acl mynet3129 myportname 3129' in text
+    assert 'acl mynet3130 myportname 3130' not in text
+    assert 'tcp_outgoing_address fdb8:c38f:49bf:3505::2 mynet3128' in text
+    assert 'tcp_outgoing_address fdb8:c38f:49bf:3505::5 mynet3129' in text
+    assert 'request_header_access If-Modified-Since allow all' in text
+    assert 'reply_header_access Date allow all' in text
 
 

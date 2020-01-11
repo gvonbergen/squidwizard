@@ -1,6 +1,6 @@
 ---
 
-# Usage: ansible-playbook ubuntu.yaml -vvv --extra-vars "PREFIX=2a01:7e01:e002:8a00:: SUBNET=56 INTERFACE=eth0 SOURCE=81.6.44.83 VPSIP=139.162.160.56"
+# Usage: ansible-playbook ansible_squid.yaml -vvv --extra-vars "PREFIX=2a01:7e01:e002:8a00:: SUBNET=56 INTERFACE=eth0 SOURCE=81.6.44.83 VPSIP=139.162.160.56"
 
 - name: Pridikt Proxy Server Installation
   hosts: squidproxies

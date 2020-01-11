@@ -9,15 +9,16 @@ import yaml
 START_PORT = 3128
 
 class SquidWizard:
-    def __init__(self, network: str, interface: str, source: str, config_folder='config'):
+    def __init__(self, network: str, interface: str, source: str, target_subnet=64, config_folder='config'):
         self.network = network
         self.interface = interface
         self.source = source
+        self.target_subnet = target_subnet
         self.config_folder = config_folder
 
-    def generate_ipv6_addresses(self, target_subnet=64) -> list:
+    def generate_ipv6_addresses(self) -> list:
         ipv6net = ip_network(self.network, strict=False)
-        ipv6subnets = ipv6net.subnets(new_prefix=target_subnet)
+        ipv6subnets = ipv6net.subnets(new_prefix=self.target_subnet)
         return [net[random.randint(1, net.num_addresses)] for net in ipv6subnets]
 
     def write_squid_config(self, ip_list):
@@ -75,13 +76,13 @@ def parse_args():
     parser.add_argument('--network', required=True, help='IPs for outgoing connections, e.g. "2a03:94e0:1914::/48"')
     parser.add_argument('--interface', required=True, help='Outgoing Interface, e.g. "eth0"')
     parser.add_argument('--source', required=True, help='Source IP connecting from, e.g. "85.195.242.0/24"')
-    parser.add_argument('--target-subnet', required=False, type=int, help='Define target network')
+    parser.add_argument('--target-subnet', required=False, type=int, default=64, help='Define target network')
     return parser.parse_args(sys.argv[1:])
 
 
 def main():
     args = parse_args()
-    sw = SquidWizard(args.network, args.interface, args.source)
+    sw = SquidWizard(args.network, args.interface, args.source, args.target_subnet)
     ip_list = sw.generate_ipv6_addresses()
     sw.write_squid_config(ip_list)
     sw.write_netplan_config(ip_list)

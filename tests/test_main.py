@@ -14,8 +14,8 @@ def test_ipv6_56to64subnet():
 
 
 def test_ipv6_64to80subnet():
-    sw = SquidWizard(network='fdb8:c38f:49bf:3505::/64', interface='eth0', source='192.168.1.1')
-    ip_list = sw.generate_ipv6_addresses(target_subnet=80)
+    sw = SquidWizard(network='fdb8:c38f:49bf:3505::/64', interface='eth0', target_subnet=80, source='192.168.1.1')
+    ip_list = sw.generate_ipv6_addresses()
     assert len(ip_list) == 65536
     assert isinstance(ip_list[0], IPv6Address)
 

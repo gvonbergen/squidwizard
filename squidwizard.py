@@ -8,6 +8,7 @@ import yaml
 
 START_PORT = 3128
 
+
 class SquidWizard:
     def __init__(self, network: str, interface: str, source: str, target_subnet=64, config_folder='config'):
         self.network = network

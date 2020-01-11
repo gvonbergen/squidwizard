@@ -1,5 +1,8 @@
 from ipaddress import IPv6Address
 
+import pytest
+import yaml
+
 from squidwizard import SquidWizard
 
 
@@ -33,3 +36,15 @@ def test_write_squid_config(tmp_path):
     assert 'reply_header_access Date allow all' in text
 
 
+def test_write_netplan_config(tmp_path):
+    sw = SquidWizard(network='fdb4:c38f:49bf:3505::/64', interface='eth0', source='192.168.1.1', config_folder=tmp_path)
+    ip_list = [IPv6Address('fdb4:c38f:49bf:3505::2'), IPv6Address('fdb4:c38f:49bf:3505::5')]
+    sw.write_netplan_config(ip_list=ip_list)
+    assert len(list(tmp_path.iterdir())) == 1
+    file = tmp_path.joinpath('01-netcfg.yaml')
+    netplan_file = yaml.load(file.read_text())
+    assert len(netplan_file['network']['ethernets']['eth0']['addresses']) == 2
+    assert netplan_file['network']['ethernets']['eth0']['addresses'][0] == 'fdb4:c38f:49bf:3505::2/128'
+    assert netplan_file['network']['ethernets']['eth0']['addresses'][1] == 'fdb4:c38f:49bf:3505::5/128'
+    with pytest.raises(IndexError):
+        assert netplan_file['network']['ethernets']['eth0']['addresses'][2]

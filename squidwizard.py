@@ -51,7 +51,7 @@ class SquidWizard:
                 f.write('reply_header_access {} allow all\n'.format(header))
             f.write('reply_header_access All deny all\n')
 
-    def write_netplan_file(self, ip_list):
+    def write_netplan_config(self, ip_list):
         netplan = {
             'network': {
                 'renderer': 'networkd',
@@ -84,7 +84,7 @@ def main():
     sw = SquidWizard(args.network, args.interface, args.source)
     ip_list = sw.generate_ipv6_addresses()
     sw.write_squid_config(ip_list)
-    sw.write_netplan_file(ip_list)
+    sw.write_netplan_config(ip_list)
 
 
 if __name__ == '__main__':

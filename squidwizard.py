@@ -81,7 +81,7 @@ def parse_args():
 
 def main():
     args = parse_args()
-    sw = SquidWizard(args.network, args.interface, args.source, args.target_subnet)
+    sw = SquidWizard(args.network, args.interface, args.source)
     ip_list = sw.generate_ipv6_addresses()
     sw.write_squid_config(ip_list)
     sw.write_netplan_file(ip_list)

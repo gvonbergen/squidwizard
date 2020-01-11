@@ -1,0 +1,106 @@
+---
+
+# Usage: ansible-playbook ubuntu.yaml -vvv --extra-vars "PREFIX=2a01:7e01:e002:8a00:: SUBNET=56 INTERFACE=eth0 SOURCE=81.6.44.83 VPSIP=139.162.160.56"
+
+- name: Pridikt Proxy Server Installation
+  hosts: squidproxies
+
+  tasks:
+    - name: Activate building resources in apt/sources.list
+      replace:
+        path: /etc/apt/sources.list
+        regexp: "# deb-src"
+        replace: "deb-src"
+
+    - name: Install essential build tools
+      apt:
+        pkg:
+          - git
+          - build-essential
+          - devscripts
+          - libdbi-perl
+#          - ssl-cert
+
+    - name: Install build dependencies for Squid3
+      apt:
+        pkg:
+          - squid3
+        state: build-dep
+
+    - name: Install Squid3 source code
+      command: apt-get source squid3
+      args:
+        chdir: /tmp
+
+    - name: Download Squid3 patch file
+      get_url:
+        url: https://raw.githubusercontent.com/gvonbergen/squidwizard/master/addons/squid_http_violations_patch_3.5.27.patch
+        dest: /tmp/squid_http_violations_patch_3.5.27.patch
+
+    - name: Patch Squid3 debian rules file
+      patch:
+        remote_src: yes
+        src: /tmp/squid_http_violations_patch_3.5.27.patch
+        dest: /tmp/squid3-3.5.27/debian/rules
+
+    - name: Check if build files already exist
+      stat:
+        path: /tmp/squid3_3.5.27-1ubuntu1.4_amd64.build
+      register: squid3_build
+
+    - name: Build Squid3 target
+      command: debuild -us -uc -b
+      args:
+        chdir: /tmp/squid3-3.5.27
+      environment:
+        DEB_CXXFLAGS_APPEND: -DMAXTCPLISTENPORTS=2048
+      when: squid3_build.stat.exists == false
+
+    - name: Install Squid3 packages
+      apt:
+        deb: /tmp/{{ item }}
+      with_items:
+        - squid3_3.5.27-1ubuntu1.4_all.deb
+        - squid_3.5.27-1ubuntu1.4_amd64.deb
+        - squid-cgi_3.5.27-1ubuntu1.4_amd64.deb
+        - squidclient_3.5.27-1ubuntu1.4_amd64.deb
+        - squid-common_3.5.27-1ubuntu1.4_all.deb
+        - squid-dbg_3.5.27-1ubuntu1.4_amd64.deb
+        - squid-purge_3.5.27-1ubuntu1.4_amd64.deb
+
+    - name: Download SquidWizard
+      git:
+        repo: https://github.com/gvonbergen/squidwizard.git
+        dest: /tmp/squidwizard
+
+    - name: Run SquidWizard
+      command: >
+        python3 squidwizard.py --prefix {{ PREFIX }} --subnet {{ SUBNET }} --interface {{ INTERFACE }}
+        --source {{ SOURCE }} --vpsip {{ VPSIP }}
+      args:
+        chdir: /tmp/squidwizard
+
+    - name: Remove networkd file
+      file:
+        path: /etc/systemd/network/05-eth0.network
+        state: absent
+
+    - name: Copy netplan file
+      copy:
+        remote_src: yes
+        src: /tmp/squidwizard/config/01-netcfg.yaml
+        dest: /etc/netplan
+
+    - name: Copy squid file
+      copy:
+        remote_src: yes
+        src: /tmp/squidwizard/config/squid.conf
+        dest: /etc/squid
+
+    - name: Apply changes to netplan
+      command: netplan apply
+
+    - name: Restart squid
+      systemd:
+        state: restarted
+        name: squid

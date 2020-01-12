@@ -5,6 +5,8 @@
 
   vars:
     install_dir: /tmp
+    squid_dir: "{{ install_dir }}/squid"
+    squidwizard_dir: "{{ install_dir }}/squidwizard"
 
   tasks:
     - name: Activate building repositories in apt/sources.list
@@ -15,12 +17,13 @@
 
     - name: Install essential build tools
       apt:
+        update_cache: yes
         pkg:
           - git
           - build-essential
           - libssl-dev
           - apache2-utils
-#          - devscripts
+          - devscripts
 #          - libdbi-perl
 #          - ssl-cert
 
@@ -30,38 +33,46 @@
           - squid3
         state: build-dep
 
+    - name: Create directories
+      file:
+        path: "{{ item }}"
+        state: directory
+      with_items:
+        - "{{ squid_dir }}"
+        - "{{ squidwizard_dir }}"
+
     - name: Install Squid3 source code
       command: apt-get source squid3
       args:
-        chdir: "{{ install_dir }}/squid"
+        chdir: "{{ squid_dir }}"
 
     - name: Download Squid3 patch file
       get_url:
         url: https://raw.githubusercontent.com/gvonbergen/squidwizard/master/addons/squid_http_violations_patch_3.5.27.patch
-        dest: "{{ install_dir }}/squid/squid_http_violations_patch_3.5.27.patch"
+        dest: "{{ squid_dir }}/squid_http_violations_patch_3.5.27.patch"
 
     - name: Patch Squid3 Debian rules file
       patch:
         remote_src: yes
-        src: "{{ install_dir }}/squid/squid_http_violations_patch_3.5.27.patch"
-        dest: "{{ install_dir }}/squid/squid3-3.5.27/debian/rules"
+        src: "{{ squid_dir }}/squid_http_violations_patch_3.5.27.patch"
+        dest: "{{ squid_dir }}/squid3-3.5.27/debian/rules"
 
     - name: Check if build files already exist
       stat:
-        path: "{{ install_dir }}/squid/squid3_3.5.27-1ubuntu1.4_amd64.build"
+        path: "{{ squid_dir }}/squid3_3.5.27-1ubuntu1.4_amd64.build"
       register: squid3_build
 
     - name: Build Squid3 target
       command: debuild -us -uc -b
       args:
-        chdir: "{{ install_dir }}/squid/squid3-3.5.27"
+        chdir: "{{ squid_dir }}/squid3-3.5.27"
       environment:
         DEB_CXXFLAGS_APPEND: -DMAXTCPLISTENPORTS=2048
       when: squid3_build.stat.exists == false
 
     - name: Install Squid3 packages
       apt:
-        deb: "{{ install_dir }}/squid/{{ item }}"
+        deb: "{{ squid_dir }}/{{ item }}"
       with_items:
         - squid3_3.5.27-1ubuntu1.4_all.deb
         - squid_3.5.27-1ubuntu1.4_amd64.deb
@@ -75,13 +86,13 @@
     - name: Download SquidWizard
       git:
         repo: https://github.com/gvonbergen/squidwizard.git
-        dest: "{{ install_dir }}/squidwizard"
+        dest: "{{ squidwizard_dir }}"
 
     - name: Run SquidWizard
       command: >
         python3 squidwizard.py --network {{ NETWORK }} --interface {{ INTERFACE }} --source {{ SOURCE }}
       args:
-        chdir: "{{ install_dir }}/squidwizard"
+        chdir: "{{ squidwizard_dir }}"
 
     - name: Remove networkd file
       file:
@@ -91,13 +102,13 @@
     - name: Copy netplan file
       copy:
         remote_src: yes
-        src: "{{ install_dir }}/squidwizard/config/01-netcfg.yaml"
+        src: "{{ squidwizard_dir }}/config/01-netcfg.yaml"
         dest: /etc/netplan
 
     - name: Copy squid file
       copy:
         remote_src: yes
-        src: "{{ install_dir }}/squidwizard/config/squid.conf"
+        src: "{{ squidwizard_dir }}/config/squid.conf"
         dest: /etc/squid
 
     - name: Apply changes to netplan

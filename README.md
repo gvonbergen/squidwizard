@@ -19,8 +19,13 @@ usage: squidwizard.py [-h]
     --source SOURCE 
     [--target-subnet TARGET_SUBNET]
 
-## Ansible usage
+--network: Add the routed network provided by your provider, e.g. fdc1:0072:bb6c:e3::/56
+--interface: Define the primary interface of your VPS, e.g. eth0
+--source: The IPv4 IP you are accessing the router from, e.g. 1.2.3.4
+--target-subnet: Default is a "64". Please provide a different value if you want a different subnet or more/less
+random IPs
 
+## Ansible usage
 ### /etc/ansible/hosts
 Create first an entry for your proxy in your /etc/ansible/hosts file. The variables NETWORK, INTERFACE & SOURCE
 are needed in order to work

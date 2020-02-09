@@ -122,10 +122,10 @@
         - restart squid
 
   handlers:
+    - name: apply netplan
+      command: netplan apply
+
     - name: restart squid
       systemd:
         state: restarted
         name: squid
-
-    - name: apply netplan
-      command: netplan apply

@@ -24,8 +24,6 @@
           - libssl-dev
           - apache2-utils
           - devscripts
-#          - libdbi-perl
-#          - ssl-cert
 
     - name: Install build dependencies for Squid3
       apt:

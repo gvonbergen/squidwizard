@@ -4,9 +4,9 @@
   hosts: squidproxies
 
   vars:
-    install_dir: /tmp
-    squid_dir: "{{ install_dir }}/squid"
-    squidwizard_dir: "{{ install_dir }}/squidwizard"
+    install_dir: "{{ ansible_env.HOME }}"
+    squid_dir: "{{ install_dir }}/src/squid"
+    squidwizard_dir: "{{ install_dir }}/src/squidwizard"
 
   tasks:
     - name: Activate building repositories in apt/sources.list
@@ -43,6 +43,7 @@
       command: apt-get source squid3
       args:
         chdir: "{{ squid_dir }}"
+      when: ansible_facts["distribution"] == "Ubuntu"
 
     - name: Download Squid3 patch file
       get_url:
@@ -88,7 +89,14 @@
 
     - name: Run SquidWizard
       command: >
-        python3 squidwizard.py --network {{ NETWORK }} --interface {{ INTERFACE }} --source {{ SOURCE }}
+        python3 squidwizard.py
+        --network {{ NETWORK }}
+        --interface {{ INTERFACE }}
+        --source {{ SOURCE }}
+        --local-net "ipv4={{ hostvars[inventory_hostname]['ansible_default_ipv4']['address'] }}/24
+        gateway4={{ hostvars[inventory_hostname]['ansible_default_ipv4']['gateway'] }}
+        ipv6={{ hostvars[inventory_hostname]['ansible_default_ipv6']['address'] }}/{{ hostvars[inventory_hostname]['ansible_default_ipv6']['prefix'] }}
+        gateway6={{ hostvars[inventory_hostname]['ansible_default_ipv6']['gateway'] }}"
       args:
         chdir: "{{ squidwizard_dir }}"
 
@@ -102,17 +110,22 @@
         remote_src: yes
         src: "{{ squidwizard_dir }}/config/01-netcfg.yaml"
         dest: /etc/netplan
+      notify:
+        - apply netplan
 
     - name: Copy squid file
       copy:
         remote_src: yes
         src: "{{ squidwizard_dir }}/config/squid.conf"
         dest: /etc/squid
+      notify:
+        - restart squid
 
-    - name: Apply changes to netplan
-      command: netplan apply
-
-    - name: Restart squid
+  handlers:
+    - name: restart squid
       systemd:
         state: restarted
         name: squid
+
+    - name: apply netplan
+      command: netplan apply

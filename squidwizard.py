@@ -53,16 +53,27 @@ class SquidWizard:
                 f.write('reply_header_access {} allow all\n'.format(header))
             f.write('reply_header_access All deny all\n')
 
-    def write_netplan_config(self, ip_list):
+    def write_netplan_config(self, ip_list, **kwargs):
+        kw = {}
+        addresses = [f'{ip}/128' for ip in ip_list]
+        if 'ipv4' in kwargs and 'gateway4' in kwargs:
+            addresses.append(kwargs['ipv4'])
+            kw['gateway4'] = kwargs['gateway4']
+        else:
+            kw['dhcp4'] = 'yes'
+        if 'ipv6' in kwargs and 'gateway6' in kwargs:
+            addresses.append(kwargs['ipv6'])
+            kw['gateway6'] = kwargs['gateway6']
+        else:
+            kw['dhcp6'] = 'yes'
         netplan = {
             'network': {
                 'renderer': 'networkd',
                 'version': 2,
                 'ethernets': {
                     self.interface: {
-                        'addresses': [f'{ip}/128' for ip in ip_list],
-                        'dhcp4': 'yes',
-                        'dhcp6': 'no'
+                        'addresses': addresses,
+                        **kw
                     }
                 },
             },
@@ -78,6 +89,8 @@ def parse_args():
     parser.add_argument('--interface', required=True, help='Outgoing Interface, e.g. "eth0"')
     parser.add_argument('--source', required=True, help='Source IP connecting from, e.g. "85.195.242.0/24"')
     parser.add_argument('--target-subnet', required=False, type=int, default=64, help='Define target network')
+    parser.add_argument('--local-net', required=False, help='Provide details about local network with "ipv4=1.1.1.2 '
+                                                            'v4gateway=1.1.1.1"')
     return parser.parse_args(sys.argv[1:])
 
 
@@ -86,7 +99,7 @@ def main():
     sw = SquidWizard(args.network, args.interface, args.source, args.target_subnet)
     ip_list = sw.generate_ipv6_addresses()
     sw.write_squid_config(ip_list)
-    sw.write_netplan_config(ip_list)
+    sw.write_netplan_config(ip_list, **dict(arg.split('=') for arg in args.local_net.split(' ')))
 
 
 if __name__ == '__main__':

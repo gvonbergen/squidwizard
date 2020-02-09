@@ -5,6 +5,11 @@ import yaml
 
 from squidwizard import SquidWizard
 
+@pytest.fixture()
+def sw_setup(tmp_path):
+    sw = SquidWizard(network='fdb4:c38f:49bf:3505::/64', interface='eth0', source='192.168.1.1', config_folder=tmp_path)
+    ip_list = [IPv6Address('fdb4:c38f:49bf:3505::2'), IPv6Address('fdb4:c38f:49bf:3505::5')]
+    return sw, ip_list
 
 def test_ipv6_56to64subnet():
     sw = SquidWizard(network='fdc1:0072:bb6c:e3::/56', interface='eth0', source='192.168.1.1')
@@ -42,9 +47,42 @@ def test_write_netplan_config(tmp_path):
     sw.write_netplan_config(ip_list=ip_list)
     assert len(list(tmp_path.iterdir())) == 1
     file = tmp_path.joinpath('01-netcfg.yaml')
-    netplan_file = yaml.load(file.read_text())
+    netplan_file = yaml.load(file.read_text(), Loader=yaml.FullLoader)
     assert len(netplan_file['network']['ethernets']['eth0']['addresses']) == 2
     assert netplan_file['network']['ethernets']['eth0']['addresses'][0] == 'fdb4:c38f:49bf:3505::2/128'
     assert netplan_file['network']['ethernets']['eth0']['addresses'][1] == 'fdb4:c38f:49bf:3505::5/128'
     with pytest.raises(IndexError):
         assert netplan_file['network']['ethernets']['eth0']['addresses'][2]
+
+
+def test_write_netplan_config_fixipv4(tmp_path, sw_setup):
+    sw, ip_list = sw_setup
+    kwargs = {'ipv4': '1.1.1.5/24', 'gateway4': '1.1.1.1'}
+    sw.write_netplan_config(ip_list=ip_list, **kwargs)
+    file = tmp_path.joinpath('01-netcfg.yaml')
+    netplan_file = yaml.load(file.read_text(), Loader=yaml.FullLoader)
+    assert len(netplan_file['network']['ethernets']['eth0']['addresses']) == 3
+    assert netplan_file['network']['ethernets']['eth0']['gateway4'] == '1.1.1.1'
+    assert netplan_file['network']['ethernets']['eth0']['dhcp6'] == 'yes'
+
+
+def test_write_netplan_config_fixipv6(tmp_path, sw_setup):
+    sw, ip_list = sw_setup
+    kwargs = {'ipv6': 'fd08:aaaf:d3da:b19f::5/64', 'gateway6': 'fd08:aaaf:d3da:b19f::1'}
+    sw.write_netplan_config(ip_list=ip_list, **kwargs)
+    file = tmp_path.joinpath('01-netcfg.yaml')
+    netplan_file = yaml.load(file.read_text(), Loader=yaml.FullLoader)
+    assert len(netplan_file['network']['ethernets']['eth0']['addresses']) == 3
+    assert netplan_file['network']['ethernets']['eth0']['gateway6'] == 'fd08:aaaf:d3da:b19f::1'
+    assert netplan_file['network']['ethernets']['eth0']['dhcp4'] == 'yes'
+
+
+def test_write_netplan_config_mixed(tmp_path, sw_setup):
+    sw, ip_list = sw_setup
+    kwargs = {'ipv4': '1.1.1.5/24', 'gateway6': 'fd08:aaaf:d3da:b19f::1'}
+    sw.write_netplan_config(ip_list=ip_list, **kwargs)
+    file = tmp_path.joinpath('01-netcfg.yaml')
+    netplan_file = yaml.load(file.read_text(), Loader=yaml.FullLoader)
+    assert len(netplan_file['network']['ethernets']['eth0']['addresses']) == 2
+    assert netplan_file['network']['ethernets']['eth0']['dhcp4'] == 'yes'
+    assert netplan_file['network']['ethernets']['eth0']['dhcp6'] == 'yes'

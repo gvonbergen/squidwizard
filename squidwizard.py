@@ -73,6 +73,9 @@ class SquidWizard:
                 'ethernets': {
                     self.interface: {
                         'addresses': addresses,
+                        'nameservers': {
+                            'addresses': ['1.1.1.1']
+                        },
                         **kw
                     }
                 },

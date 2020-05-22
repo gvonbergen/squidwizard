@@ -57,7 +57,9 @@ class SquidWizard:
         kw = {}
         addresses = [f'{ip}/128' for ip in ip_list]
         if 'ipv4' in kwargs and 'gateway4' in kwargs:
-            addresses.append(kwargs['ipv4'])
+            ipv4_prefix_len = ip_network(kwargs['ipv4'], strict=False).prefixlen
+            ipv4_address = kwargs['ipv4'].split('/')[0]
+            addresses.append(f'{ipv4_address}/{ipv4_prefix_len}')
             kw['gateway4'] = kwargs['gateway4']
         else:
             kw['dhcp4'] = 'yes'

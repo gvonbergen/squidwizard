@@ -92,7 +92,7 @@
         --network {{ NETWORK }}
         --interface {{ INTERFACE }}
         --source {{ SOURCE }}
-        --local-net "ipv4={{ hostvars[inventory_hostname]['ansible_default_ipv4']['address'] }}/24
+        --local-net "ipv4={{ hostvars[inventory_hostname]['ansible_default_ipv4']['address'] }}/{{ hostvars[inventory_hostname]['ansible_default_ipv4']['netmask'] }}
         gateway4={{ hostvars[inventory_hostname]['ansible_default_ipv4']['gateway'] }}
         ipv6={{ hostvars[inventory_hostname]['ansible_default_ipv6']['address'] }}/{{ hostvars[inventory_hostname]['ansible_default_ipv6']['prefix'] }}
         gateway6={{ hostvars[inventory_hostname]['ansible_default_ipv6']['gateway'] }}"

@@ -65,7 +65,7 @@ class SquidWizard:
             addresses.append(kwargs['ipv6'])
             kw['gateway6'] = kwargs['gateway6']
             if not ip_network(self.network).__contains__(ip_address(kwargs['gateway6'])):
-                addresses.append("{}/64".format(kwargs['gateway6']))
+                addresses.append("{}:/64".format(kwargs['gateway6'].rsplit(":", 1)))
         else:
             kw['dhcp6'] = 'yes'
         netplan = {

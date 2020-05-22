@@ -21,8 +21,8 @@
         pkg:
           - git
           - build-essential
-          - libssl-dev
-          - apache2-utils
+#          - libssl-dev
+#          - apache2-utils
           - devscripts
 
     - name: Install build dependencies for Squid3
@@ -40,7 +40,7 @@
         - "{{ squidwizard_dir }}"
 
     - name: Install Squid3 source code
-      command: apt-get source squid3
+      command: apt source squid3
       args:
         chdir: "{{ squid_dir }}"
       when: ansible_facts["distribution"] == "Ubuntu"
@@ -56,9 +56,10 @@
         src: "{{ squid_dir }}/squid_http_violations_patch_3.5.27.patch"
         dest: "{{ squid_dir }}/squid3-3.5.27/debian/rules"
 
-    - name: Check if build files already exist
-      stat:
-        path: "{{ squid_dir }}/squid3_3.5.27-1ubuntu1.4_amd64.build"
+    - name: Check if build file already exist
+      find:
+        path: "{{ squid_dir }}"
+        patterns: "*.build"
       register: squid3_build
 
     - name: Build Squid3 target
@@ -67,20 +68,18 @@
         chdir: "{{ squid_dir }}/squid3-3.5.27"
       environment:
         DEB_CXXFLAGS_APPEND: -DMAXTCPLISTENPORTS=2048
-      when: squid3_build.stat.exists == false
+      when: squid3_build.matched == 0
 
-    - name: Install Squid3 packages
+    - name: Identify Squid3 package
+      find:
+        path: "{{ squid_dir }}"
+        patterns: "squid_3*"
+      register: squid3_package
+
+    - name: Install Squid3 package
       apt:
-        deb: "{{ squid_dir }}/{{ item }}"
-      with_items:
-        - squid3_3.5.27-1ubuntu1.4_all.deb
-        - squid_3.5.27-1ubuntu1.4_amd64.deb
-        - squid-cgi_3.5.27-1ubuntu1.4_amd64.deb
-        - squidclient_3.5.27-1ubuntu1.4_amd64.deb
-        - squid-common_3.5.27-1ubuntu1.4_all.deb
-        - squid-dbg_3.5.27-1ubuntu1.4_amd64.deb
-        - squid-purge_3.5.27-1ubuntu1.4_amd64.deb
-      when: squid3_build.stat.exists == false
+        deb: "{{ squid3_package.files[0].path }}"
+      when: squid3_package.matched > 0
 
     - name: Download SquidWizard
       git:

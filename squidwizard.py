@@ -2,7 +2,7 @@ import os
 import random
 import argparse
 import sys
-from ipaddress import ip_network
+from ipaddress import ip_network, ip_address
 
 import yaml
 
@@ -64,6 +64,8 @@ class SquidWizard:
         if 'ipv6' in kwargs and 'gateway6' in kwargs:
             addresses.append(kwargs['ipv6'])
             kw['gateway6'] = kwargs['gateway6']
+            if not ip_network(self.network).__contains__(ip_address(kwargs['gateway6'])):
+                addresses.append("{}/128".format(kwargs['gateway6']))
         else:
             kw['dhcp6'] = 'yes'
         netplan = {

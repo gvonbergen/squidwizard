@@ -107,8 +107,8 @@
     - name: Copy netplan file
       copy:
         remote_src: yes
-        src: "{{ squidwizard_dir }}/config/01-netcfg.yaml"
-        dest: /etc/netplan
+        src: "{{ squidwizard_dir }}/config/60-squid.yaml"
+        dest: /etc/netplan/60-squid.yaml
       notify:
         - apply netplan
 

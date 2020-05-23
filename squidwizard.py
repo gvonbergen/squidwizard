@@ -2,18 +2,24 @@ import os
 import random
 import argparse
 import sys
-from ipaddress import ip_network, ip_address
+from datetime import datetime
+from ipaddress import ip_network
 
+import dns.zone
+import dns.rdataset
 import yaml
 
 START_PORT = 3128
 
 
 class SquidWizard:
-    def __init__(self, network: str, interface: str, source: str, target_subnet=64, config_folder='config'):
+    def __init__(self, network: str, interface: str, source: str, domain="example.com", nameserver="ns01.example.com",
+                 target_subnet=64, config_folder='config'):
         self.network = network
         self.interface = interface
         self.source = source
+        self.domain = domain
+        self.nameserver = nameserver
         self.target_subnet = target_subnet
         self.config_folder = config_folder
 
@@ -69,12 +75,53 @@ class SquidWizard:
         with open(f'{self.config_folder}/60-squid.yaml', 'w') as f:
             yaml.dump(netplan, f)
 
+    @staticmethod
+    def _add_to_zone(zone, name, rtype, input_data):
+        rdtype = dns.rdatatype.from_text(rtype)
+        rdata = dns.rdata.from_text(dns.rdataclass.IN, rdtype, input_data)
+        n = zone.get_rdataset(name, rdtype, create=True)
+        n.add(rdata, ttl=3600)
+        return zone
+
+    @staticmethod
+    def _retrive_zone_origin(network):
+        network_string, prefix_length = ip_network(network).exploded.split("/")
+        network_string = network_string.replace(":", "")
+        target_network = network_string[:int(int(prefix_length) / 4)]
+        return ".".join(target_network[::-1]) + ".ip6.arpa"
+
+    def write_ptr_zone_file(self, ip_list):
+        zone_origin = self._retrive_zone_origin(self.network)
+        zone = dns.zone.Zone(origin=zone_origin)
+
+        zone = self._add_to_zone(zone, "@", "SOA", f"{self.nameserver}. " # primary-name-server
+                                                   f"admin.{self.domain}. " # hostmaster-email
+                                                   f"{datetime.now().strftime('%Y%m%d%H')} " # serial-number
+                                                   f"1h " # time-to-refresh
+                                                   f"15m " # time-to-retry
+                                                   f"1w " # time-to-expire
+                                                   f"1h" # minimum-TTL
+                                 )
+        zone = self._add_to_zone(zone, "@", "NS", f"{self.nameserver}.")
+
+        for ip in ip_list:
+            zone = self._add_to_zone(zone,
+                                     F"{ip.reverse_pointer}.",
+                                     "PTR",
+                                     f"{ip.exploded.replace(':', '-')}.rev.{self.domain}."
+                                     )
+
+        zone.to_file(f"config/{zone_origin}")
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Create a Squid Config-File & add IPs to Ubuntu')
     parser.add_argument('--network', required=True, help='IPs for outgoing connections, e.g. "2a03:94e0:1914::/48"')
     parser.add_argument('--interface', required=True, help='Outgoing Interface, e.g. "eth0"')
     parser.add_argument('--source', required=True, help='Source IP connecting from, e.g. "85.195.242.0/24"')
+    parser.add_argument('--domain', required=False, type=str, default="example.com",
+                        help="Define the domain for your reverseDNS, e.g. example.com")
+    parser.add_argument("--nameserver", required=False, type=str, default="ns01.example.com",
+                        help="Define your nameserver, e.g. ns1.example.com")
     parser.add_argument('--target-subnet', required=False, type=int, default=64, help='Define target network')
 
     return parser.parse_args(sys.argv[1:])
@@ -82,10 +129,12 @@ def parse_args():
 
 def main():
     args = parse_args()
-    sw = SquidWizard(args.network, args.interface, args.source, args.target_subnet)
+    sw = SquidWizard(args.network, args.interface, args.source, args.domain, args.nameserver, args.target_subnet)
     ip_list = sw.generate_ipv6_addresses()
     sw.write_squid_config(ip_list)
     sw.write_netplan_config(ip_list)
+    if sw.domain:
+        sw.write_ptr_zone_file(ip_list)
 
 
 if __name__ == '__main__':

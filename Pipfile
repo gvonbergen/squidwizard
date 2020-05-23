@@ -9,6 +9,7 @@ black = "==19.10b0"
 [packages]
 pyyaml = "==5.2"
 pytest = "==5.3.2"
+dnspython = "==1.16.0"
 
 [requires]
 python_version = "3.6"

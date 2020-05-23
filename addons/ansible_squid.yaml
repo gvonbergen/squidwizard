@@ -92,10 +92,8 @@
         --network {{ NETWORK }}
         --interface {{ INTERFACE }}
         --source {{ SOURCE }}
-        --local-net "ipv4={{ hostvars[inventory_hostname]['ansible_default_ipv4']['address'] }}/{{ hostvars[inventory_hostname]['ansible_default_ipv4']['netmask'] }}
-        gateway4={{ hostvars[inventory_hostname]['ansible_default_ipv4']['gateway'] }}
-        ipv6={{ hostvars[inventory_hostname]['ansible_default_ipv6']['address'] }}/{{ hostvars[inventory_hostname]['ansible_default_ipv6']['prefix'] }}
-        gateway6={{ hostvars[inventory_hostname]['ansible_default_ipv6']['gateway'] }}"
+        --domain {{ DOMAIN }}
+        --nameserver {{ NAMESERVER }}
       args:
         chdir: "{{ squidwizard_dir }}"
 
@@ -108,7 +106,7 @@
       copy:
         remote_src: yes
         src: "{{ squidwizard_dir }}/config/60-squid.yaml"
-        dest: /etc/netplan/60-squid.yaml
+        dest: /etc/netplan
       notify:
         - apply netplan
 

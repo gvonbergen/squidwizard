@@ -5,8 +5,8 @@
 
   vars:
     install_dir: "{{ ansible_env.HOME }}"
-    squid_dir: {{ install_dir }}/src/squid
-    squidwizard_dir: {{ install_dir }}/src/squidwizard
+    squid_dir: "{{ install_dir }}/src/squid"
+    squidwizard_dir: "{{ install_dir }}/src/squidwizard"
 
   tasks:
     - name: Activate building repositories in apt/sources.list
@@ -42,26 +42,26 @@
       command: apt source squid3
       args:
         chdir: "{{ squid_dir }}"
-      creates: {{ squid_dir }}/*.dsc
+      creates: "{{ squid_dir }}/*.dsc"
       when: ansible_facts["distribution"] == "Ubuntu"
 
     - name: Download Squid3 patch file
       get_url:
         url: https://raw.githubusercontent.com/gvonbergen/squidwizard/master/addons/squid_http_violations_patch_3.5.27.patch
-        dest: {{ squid_dir }}/squid_http_violations_patch_3.5.27.patch
+        dest: "{{ squid_dir }}/squid_http_violations_patch_3.5.27.patch"
 
     - name: Patch Squid3 Debian rules file
       patch:
         remote_src: yes
-        src: {{ squid_dir }}/squid_http_violations_patch_3.5.27.patch
-        dest: {{ squid_dir }}/squid3-3.5.27/debian/rules
+        src: "{{ squid_dir }}/squid_http_violations_patch_3.5.27.patch"
+        dest: "{{ squid_dir }}/squid3-3.5.27/debian/rules"
 
     - name: Build Squid3 target
       command:
         cmd: debuild -us -uc -b
         creates: "{{ squid_dir }}/*.build"
       args:
-        chdir: {{ squid_dir }}/squid3-3.5.27
+        chdir: "{{ squid_dir }}/squid3-3.5.27"
       environment:
         DEB_CXXFLAGS_APPEND: -DMAXTCPLISTENPORTS=2048
 
@@ -74,7 +74,7 @@
     - name: Install Squid3 package
       apt:
         deb: "{{ squid3_package.files[0].path }}"
-      creates: {{ squid_dir }}/squid_3*
+      creates: "{{ squid_dir }}/squid_3*"
       when: squid3_package.matched > 0
 
     - name: Download SquidWizard
@@ -90,7 +90,7 @@
     - name: Run Pipenv to install SquidWizard dependencies
       command:
         cmd: pipenv install
-        creates: {{ ansible_env.HOME }}/.local/share/virtualenvs/squidwizard*
+        creates: "{{ ansible_env.HOME }}/.local/share/virtualenvs/squidwizard*"
       args:
         chdir: "{{ squidwizard_dir }}"
 

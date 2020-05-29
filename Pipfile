@@ -5,6 +5,7 @@ verify_ssl = true
 
 [dev-packages]
 black = "==19.10b0"
+flake8 = "*"
 
 [packages]
 pyyaml = "==5.2"

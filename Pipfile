@@ -6,10 +6,11 @@ verify_ssl = true
 [dev-packages]
 black = "==19.10b0"
 flake8 = "*"
+pytest = "==5.3.2"
+rope = "==0.17.0"
 
 [packages]
 pyyaml = "==5.2"
-pytest = "==5.3.2"
 dnspython = "==1.16.0"
 
 [requires]

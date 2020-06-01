@@ -31,10 +31,34 @@ class SquidWizard:
         self.target_subnet = target_subnet
         self.config_folder = config_folder
 
+    def new_prefix_length(self) -> int:
+        """
+        Returns a target prefix length with maximum 1024 or 10^10 subnets
+        """
+        network_prefix_length = ip_network(self.network, strict=False).prefixlen
+        prefix_distance = self.target_subnet - network_prefix_length
+        MAX_PREFIX_DISTANCE = 10
+        if prefix_distance <= MAX_PREFIX_DISTANCE:
+            return self.target_subnet
+        else:
+            return network_prefix_length + MAX_PREFIX_DISTANCE
+
+    @staticmethod
+    def random_ip_address(subnet: ip_network):
+        """
+        Returns a random IP address from the provided subnet
+        """
+        return subnet[random.randint(1, subnet.num_addresses)]
+
     def generate_ipv6_addresses(self) -> list:
-        ipv6net = ip_network(self.network, strict=False)
-        ipv6subnets = ipv6net.subnets(new_prefix=self.target_subnet)
-        return [net[random.randint(1, net.num_addresses)] for net in ipv6subnets]
+        """
+        Returns a list of random ip adresses from the new prefix less the number of
+        ignored networks due to the networkd limitation of max 1024 fix IP adresses
+        """
+        ipv6_network = ip_network(self.network, strict=False)
+        ipv6_subnets = ipv6_network.subnets(new_prefix=self.new_prefix_length())
+        IGNORED_NETWORKS = 1
+        return [self.random_ip_address(net) for net in ipv6_subnets][IGNORED_NETWORKS:]
 
     def write_squid_config(self, ip_list):
         os.makedirs(self.config_folder, exist_ok=True)

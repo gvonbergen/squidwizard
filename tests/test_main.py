@@ -1,4 +1,4 @@
-from ipaddress import IPv6Address
+from ipaddress import IPv6Address, IPv6Network
 
 import pytest
 import yaml
@@ -21,12 +21,44 @@ def sw_setup(tmp_path):
     return sw, ip_list
 
 
+def test_calculate_new_prefix_length_default():
+    sw = SquidWizard(
+        network="fdc1:7::/48",
+        interface="eth0",
+        source="0.0.0.0"
+    )
+    calculated_new_prefix = sw.new_prefix_length()
+    assert calculated_new_prefix == 58
+
+
+@pytest.mark.parametrize(
+    "input_prefix,default_prefix,new_prefix",
+    [(48, 64, 58), (56, 64, 64), (48, 56, 56)],
+)
+def test_calculate_new_prefix_length(input_prefix, default_prefix, new_prefix):
+    sw = SquidWizard(
+        network=f"fdc1:7::/{input_prefix}",
+        interface="eth0",
+        source="0.0.0.0",
+        target_subnet=default_prefix,
+    )
+    calculated_new_prefix = sw.new_prefix_length()
+    assert calculated_new_prefix == new_prefix
+
+
+def test_random_ip_address():
+    ipv6_network = IPv6Network("fdc1:0072:bb6c:e3::/56", strict=False)
+    ipv6_address = SquidWizard.random_ip_address(ipv6_network)
+    ipv6_subnet = IPv6Network(f"{ipv6_address}/128", strict=False)
+    assert ipv6_subnet.subnet_of(ipv6_network)
+
+
 def test_ipv6_56to64subnet():
     sw = SquidWizard(
         network="fdc1:0072:bb6c:e3::/56", interface="eth0", source="192.168.1.1"
     )
     ip_list = sw.generate_ipv6_addresses()
-    assert len(ip_list) == 256
+    assert len(ip_list) == 255
     assert isinstance(ip_list[0], IPv6Address)
 
 
@@ -38,7 +70,7 @@ def test_ipv6_64to80subnet():
         source="192.168.1.1",
     )
     ip_list = sw.generate_ipv6_addresses()
-    assert len(ip_list) == 65536
+    assert len(ip_list) == 1023
     assert isinstance(ip_list[0], IPv6Address)
 
 

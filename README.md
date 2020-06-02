@@ -14,21 +14,20 @@ CXXFLAGS "DMAXTCPLISTENPORTS=xxx"
 
 ## Squidwizard usage
 usage: squidwizard.py [-h] 
-    --network NETWORK 
-    --interface INTERFACE 
-    --source SOURCE 
-    [--target-subnet TARGET_SUBNET]
-    [--domain DOMAIN]
-    [--nameserver NAMESERVER]
-    [--config-folder CONFIG_FOLDER]
+    --network NETWORK  
+    --interface INTERFACE  
+    --source SOURCE  
+    [--target-subnet TARGET_SUBNET]  
+    [--domain DOMAIN]  
+    [--nameserver NAMESERVER]  
+    [--config-folder CONFIG_FOLDER]  
 
---network: Add the routed IPv6 network provided by your provider, e.g. fdc1:0072:bb6c:e3::/56
---interface: Define the network interface, e.g. eth0
---source: The IPv4 IP you are accessing the router from, e.g. 1.2.3.4
---target-subnet: Default is a "64". Please provide a different value if you want a different subnet or more/less
-random IPs
---domain: Default is "example.com". Please provide your domain for the BIND rDNS configuration
---nameserver: Default is "ns1.example.com". Please provide the nameserver for the BIND rDNS configuration
+--network: Add the routed IPv6 network provided by your provider, e.g. fdc1:0072:bb6c:e3::/56\
+--interface: Define the network interface, e.g. eth0  
+--source: The IPv4 IP you are accessing the router from, e.g. 1.2.3.4  
+--target-subnet: Default is a "64". Please provide a different value if you want a different subnet or more/less random IPs  
+--domain: Default is "example.com". Please provide your domain for the BIND rDNS configuration  
+--nameserver: Default is "ns1.example.com". Please provide the nameserver for the BIND rDNS configuration  
 --config-folder: Default is "config". Create a different subfolder in case you want to change the destination for the configuration files
 
 ## Ansible usage
@@ -37,6 +36,7 @@ Create first an entry for your proxy in your /etc/ansible/hosts file. The variab
 are needed in order to work
 
 Example:
+```
 all:
   hosts:
     localhost
@@ -48,6 +48,7 @@ all:
           NETWORK: "fdc1:0072:bb6c:e3::/56"
           INTERFACE: eth0
           SOURCE: 1.2.3.4
+```
 
 ### Run ansible-playbook
 Run the ansible_squid.yaml file with ansible-playbook:

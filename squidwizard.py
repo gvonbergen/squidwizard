@@ -18,17 +18,17 @@ class SquidWizard:
         network: str,
         interface: str,
         source: str,
+        target_subnet=64,
         domain="example.com",
         nameserver="ns01.example.com",
-        target_subnet=64,
         config_folder="config",
     ):
         self.network = network
         self.interface = interface
         self.source = source
+        self.target_subnet = target_subnet
         self.domain = domain
         self.nameserver = nameserver
-        self.target_subnet = target_subnet
         self.config_folder = config_folder
 
     def new_prefix_length(self) -> int:
@@ -183,41 +183,49 @@ class SquidWizard:
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Create a Squid Config-File & add IPs to Ubuntu"
+        description="Generate Squid, BIND and network configuration files for a multi "
+        "IPv6 proxy on Ubuntu 18.04"
     )
     parser.add_argument(
         "--network",
         required=True,
-        help='IPs for outgoing connections, e.g. "2a03:94e0:1914::/48"',
+        help='IPv6 subnet for outgoing connections, e.g. "2a03:94e0:1914::/48"',
     )
     parser.add_argument(
-        "--interface", required=True, help='Outgoing Interface, e.g. "eth0"'
+        "--interface", required=True, help='IPv6 interface, e.g. "eth0"'
     )
     parser.add_argument(
         "--source",
         required=True,
-        help='Source IP connecting from, e.g. "85.195.242.0/24"',
-    )
-    parser.add_argument(
-        "--domain",
-        required=False,
-        type=str,
-        default="example.com",
-        help="Define the domain for your reverseDNS, e.g. example.com",
-    )
-    parser.add_argument(
-        "--nameserver",
-        required=False,
-        type=str,
-        default="ns01.example.com",
-        help="Define your nameserver, e.g. ns1.example.com",
+        help='ACL source IP address or network, e.g. "85.195.242.0/24"',
     )
     parser.add_argument(
         "--target-subnet",
         required=False,
         type=int,
         default=64,
-        help="Define target network",
+        help="Target subnet prefix capped to 10^10 - 1",
+    )
+    parser.add_argument(
+        "--domain",
+        required=False,
+        type=str,
+        default="example.com",
+        help="Domain name for the BIND configuration, e.g. example.com",
+    )
+    parser.add_argument(
+        "--nameserver",
+        required=False,
+        type=str,
+        default="ns01.example.com",
+        help="Nameserver for the BIND configuration, e.g. ns1.example.com",
+    )
+    parser.add_argument(
+        "--config-folder",
+        required=False,
+        type=str,
+        default="config",
+        help="Different location folder",
     )
 
     return parser.parse_args(sys.argv[1:])

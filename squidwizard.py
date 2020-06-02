@@ -3,13 +3,15 @@ import random
 import argparse
 import sys
 from datetime import datetime
-from ipaddress import ip_network
+from ipaddress import ip_network, ip_address
 
 import dns.zone
 import dns.rdataset
 import yaml
 
 START_PORT = 3128
+MAX_PREFIX_DISTANCE = 10
+IGNORED_NETWORKS = 1
 
 
 class SquidWizard:
@@ -37,14 +39,13 @@ class SquidWizard:
         """
         network_prefix_length = ip_network(self.network, strict=False).prefixlen
         prefix_distance = self.target_subnet - network_prefix_length
-        MAX_PREFIX_DISTANCE = 10
         if prefix_distance <= MAX_PREFIX_DISTANCE:
             return self.target_subnet
         else:
             return network_prefix_length + MAX_PREFIX_DISTANCE
 
     @staticmethod
-    def random_ip_address(subnet: ip_network):
+    def random_ip_address(subnet: ip_network) -> ip_address:
         """
         Returns a random IP address from the provided subnet
         """
@@ -57,10 +58,12 @@ class SquidWizard:
         """
         ipv6_network = ip_network(self.network, strict=False)
         ipv6_subnets = ipv6_network.subnets(new_prefix=self.new_prefix_length())
-        IGNORED_NETWORKS = 1
         return [self.random_ip_address(net) for net in ipv6_subnets][IGNORED_NETWORKS:]
 
-    def write_squid_config(self, ip_list):
+    def write_squid_config(self, ip_list: list) -> None:
+        """
+        Function writes a squid configuration
+        """
         os.makedirs(self.config_folder, exist_ok=True)
         with open(f"{self.config_folder}/squid.conf", "w") as f:
             f.write(f"acl myip src {self.source}\n")
@@ -121,7 +124,10 @@ class SquidWizard:
                 f.write("reply_header_access {} allow all\n".format(header))
             f.write("reply_header_access All deny all\n")
 
-    def write_netplan_config(self, ip_list):
+    def write_netplan_config(self, ip_list: list) -> None:
+        """
+        Functions writes a secondary netplan configuration
+        """
         netplan = {
             "network": {
                 "renderer": "networkd",
@@ -152,7 +158,11 @@ class SquidWizard:
         target_network = network_string[: int(int(prefix_length) / 4)]
         return ".".join(target_network[::-1]) + ".ip6.arpa"
 
-    def write_ptr_zone_file(self, ip_list):
+    def write_ptr_zone_file(self, ip_list: list) -> None:
+        """
+        Function writes a BIND configuration file for the reverse DNS entry of the
+        network
+        """
         zone_origin = self._retrive_zone_origin(self.network)
         zone = dns.zone.Zone(origin=zone_origin)
 
@@ -189,7 +199,7 @@ def parse_args():
     parser.add_argument(
         "--network",
         required=True,
-        help='IPv6 subnet for outgoing connections, e.g. "2a03:94e0:1914::/48"',
+        help='IPv6 network for outgoing connections, e.g. "2a03:94e0:1914::/48"',
     )
     parser.add_argument(
         "--interface", required=True, help='IPv6 interface, e.g. "eth0"'

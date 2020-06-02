@@ -47,7 +47,7 @@
 
     - name: Download Squid3 patch file
       get_url:
-        url: https://raw.githubusercontent.com/gvonbergen/squidwizard/master/addons/squid_http_violations_patch_3.5.27.patch
+        url: https://git.vbergen.ch/gregor/squidwizard/raw/master/addons/squid_http_violations_patch_3.5.27.patch
         dest: "{{ squid_dir }}/squid_http_violations_patch_3.5.27.patch"
 
     - name: Patch Squid3 Debian rules file
@@ -79,7 +79,7 @@
 
     - name: Download SquidWizard
       git:
-        repo: https://github.com/gvonbergen/squidwizard.git
+        repo: https://git.vbergen.ch/gregor/squidwizard.git
         dest: "{{ squidwizard_dir }}"
 
     - name: Install pipenv

@@ -21,8 +21,8 @@ class SquidWizard:
         interface: str,
         source: str,
         target_subnet=64,
-        domain="example.com",
-        nameserver="ns01.example.com",
+        domain=None,
+        nameserver=None,
         config_folder="config",
     ):
         self.network = network
@@ -244,17 +244,18 @@ def parse_args():
 def main():
     args = parse_args()
     sw = SquidWizard(
-        args.network,
-        args.interface,
-        args.source,
-        args.domain,
-        args.nameserver,
-        args.target_subnet,
+        network=args.network,
+        interface=args.interface,
+        source=args.source,
+        target_subnet=args.target_subnet,
+        domain=args.domain,
+        nameserver=args.nameserver,
+        config_folder=args.config_folder,
     )
     ip_list = sw.generate_ipv6_addresses()
     sw.write_squid_config(ip_list)
     sw.write_netplan_config(ip_list)
-    if sw.domain:
+    if sw.domain or sw.nameserver:
         sw.write_ptr_zone_file(ip_list)
 
 

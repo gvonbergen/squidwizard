@@ -158,18 +158,12 @@ class SquidWizard:
         target_network = network_string[: int(int(prefix_length) / 4)]
         return ".".join(target_network[::-1]) + ".ip6.arpa"
 
-    def write_ptr_zone_file(self, ip_list: list) -> None:
-        """
-        Function writes a BIND configuration file for the reverse DNS entry of the
-        network
-        """
-        zone_origin = self._retrive_zone_origin(self.network)
-        zone = dns.zone.Zone(origin=zone_origin)
-
+    def _add_bind_common(self, zone) -> dns.zone:
         if self.nameservers:
             nameservers_list = self.nameservers.split(",")
         else:
             nameservers_list = [f"{prefix}.{self.domain}" for prefix in ["ns1", "ns2"]]
+
         zone = self._add_to_zone(
             zone,
             "@",
@@ -186,12 +180,40 @@ class SquidWizard:
         for nameserver in nameservers_list:
             zone = self._add_to_zone(zone, "@", "NS", f"{nameserver}.")
 
+        return zone
+
+    def write_ptr_zone_file(self, ip_list: list) -> None:
+        """
+        Function writes a BIND configuration file for the reverse DNS entry of the
+        network
+        """
+        zone_origin = self._retrive_zone_origin(self.network)
+        zone = dns.zone.Zone(origin=zone_origin)
+
+        zone = self._add_bind_common(zone)
+
         for ip in ip_list:
             zone = self._add_to_zone(
                 zone,
                 f"{ip.reverse_pointer}.",
                 "PTR",
                 f"{ip.exploded.replace(':', '-')}.rev.{self.domain}.",
+            )
+
+        zone.to_file(f"{self.config_folder}/{zone_origin}")
+
+    def write_bind_zone_file(self, ip_list: list) -> None:
+        zone_origin = f"rev.{self.domain}"
+        zone = dns.zone.Zone(origin=zone_origin)
+
+        zone = self._add_bind_common(zone)
+
+        for ip in ip_list:
+            zone = self._add_to_zone(
+                zone,
+                f"{ip.exploded.replace(':', '-')}.rev.{self.domain}.",
+                "AAAA",
+                ip.exploded,
             )
 
         zone.to_file(f"{self.config_folder}/{zone_origin}")
@@ -262,6 +284,7 @@ def main():
     sw.write_squid_config(ip_list)
     sw.write_netplan_config(ip_list)
     if sw.domain:
+        sw.write_bind_zone_file(ip_list)
         sw.write_ptr_zone_file(ip_list)
 
 

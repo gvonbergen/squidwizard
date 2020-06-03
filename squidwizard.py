@@ -21,8 +21,8 @@ class SquidWizard:
         interface: str,
         source: str,
         target_subnet=64,
-        domain="example.com",
-        nameserver="ns01.example.com",
+        domain=None,
+        nameservers=None,
         config_folder="config",
     ):
         self.network = network
@@ -30,7 +30,7 @@ class SquidWizard:
         self.source = source
         self.target_subnet = target_subnet
         self.domain = domain
-        self.nameserver = nameserver
+        self.nameservers = nameservers
         self.config_folder = config_folder
 
     def new_prefix_length(self) -> int:
@@ -158,6 +158,30 @@ class SquidWizard:
         target_network = network_string[: int(int(prefix_length) / 4)]
         return ".".join(target_network[::-1]) + ".ip6.arpa"
 
+    def _add_bind_common(self, zone) -> dns.zone:
+        if self.nameservers:
+            nameservers_list = self.nameservers.split(",")
+        else:
+            nameservers_list = [f"{prefix}.{self.domain}" for prefix in ["ns1", "ns2"]]
+
+        zone = self._add_to_zone(
+            zone,
+            "@",
+            "SOA",
+            f"{nameservers_list[0]}. "  # primary-name-server
+            f"hostmaster.{self.domain}. "  # hostmaster-email
+            f"{datetime.now().strftime('%Y%m%d%H')} "  # serial-number
+            f"1h "  # time-to-refresh
+            f"15m "  # time-to-retry
+            f"1w "  # time-to-expire
+            f"1h",  # minimum-TTL
+        )
+
+        for nameserver in nameservers_list:
+            zone = self._add_to_zone(zone, "@", "NS", f"{nameserver}.")
+
+        return zone
+
     def write_ptr_zone_file(self, ip_list: list) -> None:
         """
         Function writes a BIND configuration file for the reverse DNS entry of the
@@ -166,19 +190,7 @@ class SquidWizard:
         zone_origin = self._retrive_zone_origin(self.network)
         zone = dns.zone.Zone(origin=zone_origin)
 
-        zone = self._add_to_zone(
-            zone,
-            "@",
-            "SOA",
-            f"{self.nameserver}. "  # primary-name-server
-            f"admin.{self.domain}. "  # hostmaster-email
-            f"{datetime.now().strftime('%Y%m%d%H')} "  # serial-number
-            f"1h "  # time-to-refresh
-            f"15m "  # time-to-retry
-            f"1w "  # time-to-expire
-            f"1h",  # minimum-TTL
-        )
-        zone = self._add_to_zone(zone, "@", "NS", f"{self.nameserver}.")
+        zone = self._add_bind_common(zone)
 
         for ip in ip_list:
             zone = self._add_to_zone(
@@ -188,7 +200,23 @@ class SquidWizard:
                 f"{ip.exploded.replace(':', '-')}.rev.{self.domain}.",
             )
 
-        zone.to_file(f"config/{zone_origin}")
+        zone.to_file(f"{self.config_folder}/{zone_origin}")
+
+    def write_bind_zone_file(self, ip_list: list) -> None:
+        zone_origin = f"rev.{self.domain}"
+        zone = dns.zone.Zone(origin=zone_origin)
+
+        zone = self._add_bind_common(zone)
+
+        for ip in ip_list:
+            zone = self._add_to_zone(
+                zone,
+                f"{ip.exploded.replace(':', '-')}.rev.{self.domain}.",
+                "AAAA",
+                ip.exploded,
+            )
+
+        zone.to_file(f"{self.config_folder}/{zone_origin}")
 
 
 def parse_args():
@@ -220,15 +248,15 @@ def parse_args():
         "--domain",
         required=False,
         type=str,
-        default="example.com",
         help="Domain name for the BIND configuration, e.g. example.com",
     )
     parser.add_argument(
-        "--nameserver",
+        "--nameservers",
         required=False,
         type=str,
-        default="ns01.example.com",
-        help="Nameserver for the BIND configuration, e.g. ns1.example.com",
+        help="Nameserver for the BIND configuration seperated by come, e.g."
+        "ns1.example.com, ns2.exmample.com. If not provided it will use by defaul "
+        "ns1/ns2.domain.com",
     )
     parser.add_argument(
         "--config-folder",
@@ -244,17 +272,19 @@ def parse_args():
 def main():
     args = parse_args()
     sw = SquidWizard(
-        args.network,
-        args.interface,
-        args.source,
-        args.domain,
-        args.nameserver,
-        args.target_subnet,
+        network=args.network,
+        interface=args.interface,
+        source=args.source,
+        target_subnet=args.target_subnet,
+        domain=args.domain,
+        nameservers=args.nameservers,
+        config_folder=args.config_folder,
     )
     ip_list = sw.generate_ipv6_addresses()
     sw.write_squid_config(ip_list)
     sw.write_netplan_config(ip_list)
     if sw.domain:
+        sw.write_bind_zone_file(ip_list)
         sw.write_ptr_zone_file(ip_list)
 
 
